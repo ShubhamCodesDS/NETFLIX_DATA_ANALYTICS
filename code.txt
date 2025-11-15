@@ -1,0 +1,146 @@
+# =======================================================
+# 1. SETUP: Import Libraries
+# =======================================================
+# Importing standard libraries for data manipulation and visualization
+import numpy as np
+import pandas as pd
+import matplotlib .pyplot as plt
+import seaborn as sns
+
+# =======================================================
+# 2. DATA LOADING & INITIAL INSPECTION
+# =======================================================
+# Load the dataset (using lineterminator='\n' to handle potential newline issues)
+df = pd.read_csv("mymoviedb.csv", lineterminator = '\n')
+
+# Display initial information about the DataFrame, including data types and non-null counts
+df.info()
+
+# Preview the 'Genre' column
+df['Genre'].head()
+
+# Check for and count duplicated rows
+df.duplicated().sum()
+
+# Generate descriptive statistics for numerical columns
+df.describe()
+
+# =======================================================
+# 3. DATA CLEANING & PREPROCESSING
+# =======================================================
+
+# Convert 'Release_Date' to datetime objects
+df['Release_Date'] = pd.to_datetime(df['Release_Date'])
+print(df['Release_Date'].dtypes)
+
+# Extract only the year from 'Release_Date' for time-series analysis
+df['Release_Date'] = df['Release_Date'].dt.year
+df['Release_Date'].dtypes
+
+# Preview data after date transformation
+df.head()
+
+# Identify and drop columns that are not needed for the analysis
+cols = ['Overview', 'Original_Language', 'Poster_Url']
+df.drop(cols, axis = 1, inplace = True)
+df.columns
+df.head()
+
+# =======================================================
+# 4. FEATURE ENGINEERING: Categorize Vote Average
+# =======================================================
+
+# Define a function to categorize a continuous variable into quartile-based labels
+def categorize_col(df, col, labels):
+    edges = [
+        df[col].describe()['min'],
+        df[col].describe()['25%'],
+        df[col].describe()['50%'],
+        df[col].describe()['75%'],
+        df[col].describe()['max']
+    ]
+
+    df[col] = pd.cut(df[col], edges, labels=labels, duplicates='drop')
+    return df
+
+# Apply the function to categorize 'Vote_Average' into defined popularity bins
+labels = ['not_popular', 'below_avg', 'average', 'popular']
+df = categorize_col(df, 'Vote_Average', labels)
+df['Vote_Average'].unique()
+df.head()
+df['Vote_Average'].value_counts()
+
+# Handle remaining missing values by dropping rows (after feature engineering)
+df.dropna(inplace = True)
+df.isna().sum()
+df.head()
+
+# =======================================================
+# 5. DATA TRANSFORMATION: Explode Genres
+# =======================================================
+
+# Split the string of genres into a list of individual genres
+df['Genre'] = df['Genre'].str.split(', ')
+
+# Explode the DataFrame so each movie/genre pair occupies its own row (essential for genre counting)
+df = df.explode('Genre').reset_index(drop=True)
+df.head()
+
+# Convert the 'Genre' column to the 'category' dtype for memory efficiency
+df['Genre'] = df['Genre'].astype('category')
+df['Genre'].dtypes
+
+# Final check of data structure and unique value counts
+df.info()
+df.nunique()
+df.head()
+df.tail()
+
+# =======================================================
+# 6. VISUALIZATION & ANALYSIS
+# =======================================================
+sns.set_style('whitegrid')
+df['Genre'].describe()
+
+# Plot the distribution of movie genres
+plt.figure(figsize = (10, 5))
+sns.countplot(df['Genre'], palette = 'husl')
+plt.title('Distribution of Movies by Genre')
+plt.xlabel('Genre')
+plt.ylabel('Count')
+plt.xticks(rotation = 60)
+plt.show()
+
+# Plot the distribution of movie vote categories
+plt.figure(figsize = (8, 4))
+sns.countplot(df['Vote_Average'], palette = 'winter')
+plt.title('Distribution of Movies by Vote Category')
+plt.xlabel('Vote Average Category')
+plt.ylabel('Count')
+plt.show()
+
+# Find and visualize the Top 5 most popular movies
+df_popular = df.sort_values(by = 'Popularity', ascending = False).head(5)
+plt.figure(figsize = (12, 6))
+sns.barplot(x = 'Title', y = 'Popularity', data = df_popular, palette = 'magma')
+plt.title('Top 5 Most Popular Movies')
+plt.xticks(rotation = 60)
+plt.show()
+
+# Find and visualize the 5 least popular movies
+df_least_popular = df.sort_values(by = 'Popularity', ascending = True).head(5)
+plt.figure(figsize = (12, 6))
+sns.barplot(x = 'Title', y = 'Popularity', data = df_least_popular, palette = 'magma')
+plt.title('5 Least Popular Movies')
+plt.xticks(rotation = 60)
+plt.show()
+
+# Plot the histogram of movie releases over the years
+plt.figure(figsize = (10, 6))
+plt.hist(df['Release_Date'], bins = 20, edgecolor = 'black')
+plt.title('Movie Release by Year')
+plt.xlabel('Release_Date')
+plt.ylabel('Number of Releases')
+plt.show()
+
+df.head()
