@@ -1,5 +1,4 @@
 # NETFLIX_DATA_ANALYTICS
-# Movie Data Analysis (Netflix / TMDb)
 
 ## Project Overview
 
